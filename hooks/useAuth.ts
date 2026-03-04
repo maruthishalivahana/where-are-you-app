@@ -1,35 +1,48 @@
-import { autorun } from "mobx";
-import { useEffect, useState } from "react";
+import { reaction } from "mobx";
+import { useCallback, useEffect, useReducer } from "react";
 import { loginMember } from "../api/auth";
 import { API_BASE_URL } from "../api/client";
 import { LoginRequest } from "../api/types";
 import authStore from "../store/auth";
 
-export const useAuth = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+/** Force a re-render so we can re-read the MobX store snapshot */
+const useForceUpdate = () => {
+  const [, forceRender] = useReducer((s: number) => s + 1, 0);
+  return forceRender;
+};
 
-  // Mirror MobX observables into React state so components re-render
-  const [isHydrated, setIsHydrated] = useState(authStore.isHydrated);
-  const [user, setUser] = useState(authStore.user);
-  const [token, setToken] = useState(authStore.token);
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    authStore.isAuthenticated,
+export const useAuth = () => {
+  const forceUpdate = useForceUpdate();
+  const [loading, setLoadingRaw] = useReducer(
+    (_: boolean, v: boolean) => v,
+    false,
   );
+  const [error, setErrorRaw] = useReducer(
+    (_: string | null, v: string | null) => v,
+    null as string | null,
+  );
+
+  // Keep local setters that won't trigger the MobX subscription
+  const setLoading = useCallback((v: boolean) => setLoadingRaw(v), []);
+  const setError = useCallback((v: string | null) => setErrorRaw(v), []);
 
   useEffect(() => {
     authStore.initializeAuth();
   }, []);
 
+  // Re-render whenever any relevant MobX observable changes
   useEffect(() => {
-    const dispose = autorun(() => {
-      setIsHydrated(authStore.isHydrated);
-      setUser(authStore.user);
-      setToken(authStore.token);
-      setIsAuthenticated(authStore.isAuthenticated);
-    });
+    const dispose = reaction(
+      () => ({
+        h: authStore.isHydrated,
+        u: authStore.user,
+        t: authStore.token,
+        a: authStore.isAuthenticated,
+      }),
+      () => forceUpdate(),
+    );
     return dispose;
-  }, []);
+  }, [forceUpdate]);
 
   const login = async (credentials: LoginRequest) => {
     setLoading(true);
@@ -118,9 +131,9 @@ export const useAuth = () => {
     logout,
     loading,
     error,
-    user,
-    token,
-    isAuthenticated,
-    isHydrated,
+    user: authStore.user,
+    token: authStore.token,
+    isAuthenticated: authStore.isAuthenticated,
+    isHydrated: authStore.isHydrated,
   };
 };
