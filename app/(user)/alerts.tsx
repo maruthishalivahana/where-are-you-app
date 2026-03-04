@@ -22,6 +22,8 @@ export default function UserAlertsScreen() {
       try {
         const list = await getUserNotifications();
         setNotifications(list);
+      } catch {
+        setNotifications([]);
       } finally {
         setLoading(false);
       }
@@ -31,14 +33,18 @@ export default function UserAlertsScreen() {
   }, []);
 
   const markAsRead = async (notificationId: string) => {
-    await markUserNotificationRead(notificationId);
-    setNotifications((prev) =>
-      prev.map((item) =>
-        item.id === notificationId
-          ? { ...item, isRead: true, readAt: new Date().toISOString() }
-          : item,
-      ),
-    );
+    try {
+      await markUserNotificationRead(notificationId);
+      setNotifications((prev) =>
+        prev.map((item) =>
+          item.id === notificationId
+            ? { ...item, isRead: true, readAt: new Date().toISOString() }
+            : item,
+        ),
+      );
+    } catch {
+      // best-effort
+    }
   };
 
   return (

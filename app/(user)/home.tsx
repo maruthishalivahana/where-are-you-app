@@ -81,6 +81,10 @@ export default function UserHome() {
       setNotificationCount(
         notifications.filter((n) => !(n.isRead ?? Boolean(n.readAt))).length,
       );
+    } catch {
+      // Backend unreachable – keep UI usable with empty data
+      setSavedBuses([]);
+      setNotificationCount(0);
     } finally {
       setLoadingSaved(false);
     }
@@ -135,31 +139,35 @@ export default function UserHome() {
   );
 
   const toggleSaved = async (bus: BusSearchResult) => {
-    const existing = savedMap.get(bus.busId);
+    try {
+      const existing = savedMap.get(bus.busId);
 
-    if (existing) {
-      await deleteUserSubscription(existing.subscriptionId);
-      setSavedBuses((prev) => prev.filter((b) => b.busId !== bus.busId));
-      return;
-    }
+      if (existing) {
+        await deleteUserSubscription(existing.subscriptionId);
+        setSavedBuses((prev) => prev.filter((b) => b.busId !== bus.busId));
+        return;
+      }
 
-    const created = await createUserSubscription({
-      busId: bus.busId,
-      notifyOnBusStart: true,
-      notifyOnNearStop: true,
-      nearRadiusMeters: 150,
-    });
+      const created = await createUserSubscription({
+        busId: bus.busId,
+        notifyOnBusStart: true,
+        notifyOnNearStop: true,
+        nearRadiusMeters: 150,
+      });
 
-    const mapped = extractSavedBus(created);
-    if (mapped) {
-      setSavedBuses((prev) => [
-        {
-          ...mapped,
-          numberPlate: bus.numberPlate,
-          routeName: bus.routeName,
-        },
-        ...prev,
-      ]);
+      const mapped = extractSavedBus(created);
+      if (mapped) {
+        setSavedBuses((prev) => [
+          {
+            ...mapped,
+            numberPlate: bus.numberPlate,
+            routeName: bus.routeName,
+          },
+          ...prev,
+        ]);
+      }
+    } catch {
+      // best-effort – keep UI usable
     }
   };
 

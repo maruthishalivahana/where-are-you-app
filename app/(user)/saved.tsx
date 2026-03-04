@@ -16,8 +16,12 @@ export default function SavedBusesScreen() {
   }, []);
 
   const remove = async (subscriptionId: string) => {
-    await deleteUserSubscription(subscriptionId);
-    setItems((prev) => prev.filter((item) => item.id !== subscriptionId));
+    try {
+      await deleteUserSubscription(subscriptionId);
+      setItems((prev) => prev.filter((item) => item.id !== subscriptionId));
+    } catch {
+      // best-effort
+    }
   };
 
   return (
