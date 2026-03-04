@@ -1,19 +1,25 @@
+import { Redirect } from "expo-router";
+import { ActivityIndicator, View } from "react-native";
+import { useAuth } from "../../hooks/useAuth";
 
+export default function AuthLogin() {
+  const { isHydrated, isAuthenticated, user } = useAuth();
 
-import { router } from "expo-router";
-import { Pressable, Text, View } from "react-native";
-
-export default function Login() {
+  if (!isHydrated) {
     return (
-        <View className="flex-1 items-center justify-center bg-white">
-            <Text className="text-2xl font-bold mb-4">Login</Text>
-
-            <Pressable
-                className="bg-blue-500 px-6 py-3 rounded-xl"
-                onPress={() => router.replace("/(tabs)/home")}
-            >
-                <Text className="text-white">Login</Text>
-            </Pressable>
-        </View>
+      <View className="flex-1 items-center justify-center bg-white">
+        <ActivityIndicator size="large" color="#1d4ed8" />
+      </View>
     );
+  }
+
+  if (isAuthenticated) {
+    return (
+      <Redirect
+        href={user?.role === "driver" ? "/(driver)/home" : "/(user)/home"}
+      />
+    );
+  }
+
+  return <Redirect href="/(driver)/login" />;
 }
